@@ -1,70 +1,32 @@
 [![Build ISO](https://github.com/theVakhovskeIsTaken/holoiso/actions/workflows/build.yml/badge.svg)](https://github.com/theVakhovskeIsTaken/holoiso/actions/workflows/build.yml)
 
-![image](https://user-images.githubusercontent.com/97450182/167457908-07be1a60-7e86-4bef-b7f0-6bd19efd8b24.png)
-# HoloISO
+![obraz](https://user-images.githubusercontent.com/47303937/183311516-2927dd2a-7c5b-4cf3-abbe-3f35e64ec836.png)
+# HoloFork
 SteamOS 3 (Holo) archiso configuration.
+With couple of twists.
+Basically HoloISO+.
 
-***Yes, Gabe. SteamOS functions well on a toaster.***
+Differences from HoloISO:
+- Two kernel options: Pure mainline and Mainline with couple patches for usability
+- Command line install(Gamepad support TODO)
+- Systemd-boot used instead of GRUB
+- Much much better support for handheld gaming PCs
+- Ripped out `barebones` and `gameonly` installation options(TODO)
+- More desktop environment options(TODO)
+- Ripped out NVidia GPU support
+- GPU Autodetection(TODO)
 
-This project attempts to bring the Steam Deck's SteamOS Holo into a generic, installable format, and provide a close-to-official SteamOS experience.
-Main point of this project focuses in re-implementing proprietary (as in runs-only-on-deck) components that Steam client, OS itself, gamescope and user-created applications for Deck rely on.
-
-Click [here](https://t.me/HoloISO) to join **HoloISO** Telegram update channel;
-
-Click [here](https://steamdeck.community/forums/holoiso.29/) to visit **HoloISO** discussion on Steam Deck Community forums
-
-**Common Questions**
-
-- Is this official?
-> No, but it may as well be 99% of the way there. The code and packages, are straight from Valve, with zero possible edits, and the ISO is being built on the official Steam Deck recovery image, running inside a QEMU instance.
-- The ISO didn't boot for me, any solution?
-> Currently, the ISO only boots if flashed using [BalenaEtcher](https://www.balena.io/etcher/), [RosaImageWriter](http://wiki.rosalab.ru/en/index.php/ROSA_ImageWriter), [Fedora Media Writer](https://getfedora.org/en/workstation/download/), DD with 4MB block size, or [Rufus](https://rufus.ie) with DD mode.
-
-
-**Working stuff:**
-- Bootup
-- SteamOS OOBE (Steam Deck UI First Boot Experience)
-- Deck UI (separate session)
-- Deck UI (-gamepadui)
-- TDP/FPS limiting*
-- Global FSR
-- Shader Pre-Caching
-- Switch to Desktop from plasma/to plasma without user interference.
-- Valve's exclusive *Vapor* appearance for KDE Plasma
-- Steam Deck pacman mirrors
-- Cool-looking neofetch?
-- System updates
-
-*TDP and GPU clock limiting doesn't function on APU devices, and is partly broken on dGPUs due to Deck-specific powerlimit node `/sys/class/hwmon/hwmon*/power*_cap`.
-
-**Known issues:**
-- NVIDIA GPUs are supported after following this procedure:
-
-> Only 10xx+ GPUs are FULLY supported. Although 9xx support exists in drivers, gamescope doesn't launch on it. Choose your GPU type while installing HoloISO. If you encounter any issues, reboot to recovery mode, type `recoveryinit`, connect to network using `nmtui` and install required packages.
-
-> Older GPUs won't be supported until drivers are opensourced OR Until they support atomic KMS, accelerated Xwayland, and Vulkan DMA-BUF extensions, they simply cannot function properly with HoloISO.
-
-- Intel GPUs/iGPUs require a Gamescope downgrade in order to boot into Steam Deck session. 
-
-> Choose your GPU type while installing HoloISO. If you encounter any issues, reboot to recovery mode, type `recoveryinit`, connect to network using `nmtui` and install required packages.
+Supported devices:
+- [QEMU](QEMU.md), only for testing
+- AYANEO NEXT
+- Anbernic Win600(might get removed in future due to ugly hacks required)
 
 Installation process:
 -
 **Prerequistes:**
-- 4GB flash drive
-- AMD RX Vega+/APU iGPU; 4xx/5xx, 5xxx/6xxx GPU
-or Intel UHD 630+ iGPU or NVIDIA GTX 9xx+ iGPU/GPUs (preferably without Optimus [PRIME])
-- UEFI-enabled device
-- Disabled secure boot
+- 2GB flash drive
+- A supported handheld gaming PC
 
-**Installation types:**
-- barebones 
-> An OS-only installation, resembles vanilla Arch Linux installation.
-- gameonly*
-> Steam Deck UI only (AMD GPU only; no desktop), as said, this doesn't ship any DE, and only has the Steam Deck UI installed. 
-> ****This part is currently under a renovation.***
-- deckperience
-> Full SteamOS 3 experience, Includes proper session switching, KDE Plasma + media apps, and Chromium pre-installed.
 
 **Installation:**
 - Flash the ISO from [releases](https://github.com/bhaiest/holoiso/releases/latest) or [actions](https://nightly.link/theVakhovskeIsTaken/holoiso/workflows/build/3.0/holoiso) for NVIDIA GPUs using [BalenaEtcher](https://www.balena.io/etcher/), [Rufus](https://rufus.ie) with DD mode, or by typing `sudo dd if=SteamOS.iso of=/dev/sd(your flash drive) bs=4M status=progress oflag=sync`
@@ -97,7 +59,7 @@ Building the ISO:
 Trigger the build by executing:
 ```
 pacman -Sy archiso
-git clone https://github.com/bhaiest/holoiso/
+git clone https://github.com/Maccraft123/holofork/
 sudo mkarchiso -v holoiso
 ```
 Once it ends, your ISO will be available in the `out` folder.
