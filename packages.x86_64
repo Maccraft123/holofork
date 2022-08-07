@@ -47,12 +47,11 @@ less
 lftp
 libfido2
 libusb-compat
-linux-neptune
-linux-holoiso
-linux-atm
+linux-mainline
+linux-handheld
+core/linux
 linux-firmware
 linux-firmware-marvell
-livecd-sounds
 lsscsi
 lvm2
 lynx
