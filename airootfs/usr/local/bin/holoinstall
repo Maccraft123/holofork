@@ -73,7 +73,7 @@ base_os_install() {
 	mkdir -p ${HOLO_INSTALL_DIR}/boot/
 	mount -t vfat ${INSTALLDEVICE}1 ${HOLO_INSTALL_DIR}/boot/
 
-	pacstrap -i ${HOLO_INSTALL_DIR} base base-devel ${UCODE_INSTALL} linux linux-headers linux-mainline linux-mainline-headers linux-handheld linux-handheld-headers linux-firmware efibootmgr inetutils neofetch networkmanager sddm-wayland
+	pacstrap -i ${HOLO_INSTALL_DIR} base base-devel ${UCODE_INSTALL} linux linux-headers linux-mainline linux-mainline-headers linux-handheld linux-handheld-headers linux-firmware efibootmgr inetutils neofetch networkmanager sddm-wayland rinputer
 	
 	echo "\nBase system installation done, generating fstab..."
 	genfstab -U -p ${HOLO_INSTALL_DIR} >> ${HOLO_INSTALL_DIR}/etc/fstab
@@ -134,7 +134,7 @@ base_os_install() {
 	echo "timeout 3" > ${HOLO_INSTALL_DIR}/boot/loader/loader.conf
 	echo "console-mode auto" >> ${HOLO_INSTALL_DIR}/boot/loader/loader.conf
 
-	arch-chroot ${HOLO_INSTALL_DIR} systemctl enable NetworkManager systemd-timesyncd
+	arch-chroot ${HOLO_INSTALL_DIR} systemctl enable NetworkManager systemd-timesyncd Rinputer3
 
 	echo "\nSetting up locale..."
 	echo "${SYSTEM_LOCALE}" >> ${HOLO_INSTALL_DIR}/etc/locale.gen
