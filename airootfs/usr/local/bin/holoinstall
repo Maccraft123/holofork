@@ -133,6 +133,7 @@ base_os_install() {
 	# force max resolution to autorotate display
 	echo "timeout 3" > ${HOLO_INSTALL_DIR}/boot/loader/loader.conf
 	echo "console-mode auto" >> ${HOLO_INSTALL_DIR}/boot/loader/loader.conf
+	echo "default 01-handheld.conf" >> ${HOLO_INSTALL_DIR}/boot/loader/loader.conf
 
 	arch-chroot ${HOLO_INSTALL_DIR} systemctl enable NetworkManager systemd-timesyncd Rinputer3
 
