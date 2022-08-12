@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 
-iso_name="HoloISO_Stable_GUI"
-iso_label="HOLO_$(date +%Y%m)"
-iso_publisher="theVakhovske <https://github.com/theVakhovskeIsTaken>"
-iso_application="HoloISO Installer Image"
+iso_name="HoloFork"
+iso_label="HoloFork_$(date +%Y%m)"
+iso_publisher="Maya <https://github.com/Maccraft123>"
+iso_application="HoloFork Installer"
 iso_version="$(date +%Y%m%d_%H%M)"
 install_dir="arch"
 buildmodes=('iso')
@@ -12,7 +12,7 @@ bootmodes=('uefi-x64.systemd-boot.esp' 'uefi-x64.systemd-boot.eltorito')
 arch="x86_64"
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
-airootfs_image_tool_options=('-comp' 'xz' '-Xbcj' 'x86' '-b' '1M' '-Xdict-size' '1M')
+airootfs_image_tool_options=('-comp' 'lz4' '-Xhc' '-b' '512K')
 file_permissions=(
   ["/etc/shadow"]="0:0:400"
   ["/root"]="0:0:750"
