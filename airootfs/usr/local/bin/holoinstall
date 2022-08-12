@@ -11,7 +11,7 @@ HOLO_INSTALL_DIR="${HOLO_INSTALL_DIR:-/mnt}"
 if [ $(timedatectl status | grep -c "NTP service: active") -ne 1 ]; then
 	# If NTP is not active, enable it.
 	timedatectl set-ntp true
-	
+
 	# Update the hardware clock.
 	hwclock --systohc
 fi
@@ -38,185 +38,93 @@ mkentry() {
 	echo "options root=PARTLABEL=rootfs rw quiet audit=0"
 }
 
-base_os_install() {
-	lsblk
-	read "?Enter your desired drive node here (for example, sda or nvme0n1): " DRIVEDEVICE
-	#read "?WARNING: This drive is going to be erased fully. Press enter to continue, or CTRL+Z to terminate"
-	
-	DEVICE="/dev/${DRIVEDEVICE}"
-	
-	INSTALLDEVICE="${DEVICE}"
-	
-	if echo ${DEVICE} | grep -q -P "^/dev/(nvme|loop|mmcblk)"; then
-		INSTALLDEVICE="${DEVICE}p"
-	fi
-	
-	if [ ! -b $DEVICE ]; then
-		echo "$DEVICE not found! Installation Aborted!"
-		exit 1
-	fi
-	
-	echo "\nCreating partitions..."
-	parted ${DEVICE} mklabel gpt
-	parted ${DEVICE} mkpart esp fat32 2M 256M
+lsblk
+read "?Enter your desired drive node here (for example, sda or nvme0n1): " DRIVEDEVICE
+#read "?WARNING: This drive is going to be erased fully. Press enter to continue, or CTRL+Z to terminate"
 
-	parted ${DEVICE} mkpart rootfs btrfs 256M 100%
-	parted ${DEVICE} set 1 boot on
-	parted ${DEVICE} set 1 esp on
+DEVICE="/dev/${DRIVEDEVICE}"
 
-	mkfs -t vfat ${INSTALLDEVICE}1
-	mkfs -t btrfs -f ${INSTALLDEVICE}2
+INSTALLDEVICE="${DEVICE}"
 
-	echo "\nPartitioning complete, mounting and pacstrapping..."
-	echo "${UCODE_INSTALL_MSG}"
-	mount -t btrfs -o subvol=/,compress-force=zstd:1,discard,noatime,nodiratime ${INSTALLDEVICE}2 ${HOLO_INSTALL_DIR}
-	mkdir -p ${HOLO_INSTALL_DIR}/boot/
-	mount -t vfat ${INSTALLDEVICE}1 ${HOLO_INSTALL_DIR}/boot/
-
-	pacstrap -i ${HOLO_INSTALL_DIR} base base-devel ${UCODE_INSTALL} linux linux-headers linux-mainline linux-mainline-headers linux-handheld linux-handheld-headers linux-firmware efibootmgr inetutils neofetch networkmanager sddm-wayland rinputer
-	
-	echo "\nBase system installation done, generating fstab..."
-	genfstab -U -p ${HOLO_INSTALL_DIR} >> ${HOLO_INSTALL_DIR}/etc/fstab
-	cp /etc/pacman.conf ${HOLO_INSTALL_DIR}/etc/pacman.conf
-	cp /etc/pacman.d/mirrorlist ${HOLO_INSTALL_DIR}/etc/pacman.d/mirrorlist
-
-	read "?Enter hostname for this installation: " HOLOHOSTNAME
-	echo ${HOLOHOSTNAME} > ${HOLO_INSTALL_DIR}/etc/hostname
-	# Setup password for root
-	while true; do
-		echo -n "Enter \"root\" password for this installation(will not echo): "
-		read -s ROOTPASS
-		echo
-		echo -n "Enter \"root\" password for this installation(again): "
-		read -s ROOTPASS_CONF
-		echo
-		if [ $ROOTPASS = $ROOTPASS_CONF ]; then
-			break
-		fi
-		echo "Error: Password does not match."
-	done
-	# Create user
-	while true; do
-		read "?Enter username for this installation: " HOLOUSER
-		if [ $HOLOUSER = "root" ]; then
-			echo "User \"root\" already exists!"
-		else
-			break
-		fi
-	done
-	# Setup password for user
-	while true; do
-		echo -n "Enter \"$HOLOUSER\" password for this installation(will not echo): "
-		read -s HOLOPASS
-		echo
-		echo -n "Enter \"$HOLOUSER\" password for this installation(again): "
-		read -s HOLOPASS_CONF
-		echo
-		if [ $HOLOPASS = $HOLOPASS_CONF ]; then
-			break
-		fi
-		echo "Error: Password does not match."
-	done
-	echo "\nCreating user ${HOLOUSER}..."
-	echo -e "${ROOTPASS}\n${ROOTPASS}" | arch-chroot ${HOLO_INSTALL_DIR} passwd root
-	arch-chroot ${HOLO_INSTALL_DIR} useradd --create-home ${HOLOUSER}
-	echo -e "${HOLOPASS}\n${HOLOPASS}" | arch-chroot ${HOLO_INSTALL_DIR} passwd ${HOLOUSER}
-	echo "${HOLOUSER} ALL=(root) NOPASSWD:ALL" > ${HOLO_INSTALL_DIR}/etc/sudoers.d/${HOLOUSER}
-	chmod 0440 ${HOLO_INSTALL_DIR}/etc/sudoers.d/${HOLOUSER}
-	echo "127.0.1.1    ${HOLOHOSTNAME}" >> ${HOLO_INSTALL_DIR}/etc/hosts
-
-	echo "\nInstalling bootloader..."
-	arch-chroot ${HOLO_INSTALL_DIR} bootctl install
-	mkentry "SteamOS, Patched mainline kernel" "handheld" > ${HOLO_INSTALL_DIR}/boot/loader/entries/01-handheld.conf
-	mkentry "SteamOS, Pure mainline kernel" "mainline" > ${HOLO_INSTALL_DIR}/boot/loader/entries/02-mainline.conf
-
-	# force max resolution to autorotate display
-	echo "timeout 3" > ${HOLO_INSTALL_DIR}/boot/loader/loader.conf
-	echo "console-mode auto" >> ${HOLO_INSTALL_DIR}/boot/loader/loader.conf
-	echo "default 01-handheld.conf" >> ${HOLO_INSTALL_DIR}/boot/loader/loader.conf
-
-	arch-chroot ${HOLO_INSTALL_DIR} systemctl enable NetworkManager systemd-timesyncd Rinputer3
-
-	echo "\nSetting up locale..."
-	echo "${SYSTEM_LOCALE}" >> ${HOLO_INSTALL_DIR}/etc/locale.gen
-	arch-chroot ${HOLO_INSTALL_DIR} locale-gen
-	echo "LANG=$(echo ${SYSTEM_LOCALE} | cut -d' ' -f1)" > ${HOLO_INSTALL_DIR}/etc/locale.conf	
-}
-full_install() {
-    echo "Installing full SteamOS 3..."
-    sleep 1
-    # The actual installation begins here:
-	arch-chroot ${HOLO_INSTALL_DIR} ${CMD_PACMAN_UPDATE}
-	arch-chroot ${HOLO_INSTALL_DIR} ${CMD_PACMAN_INSTALL} holoiso-main holoiso-updateclient wireplumber
-	sleep 1
-	while true
-	do
-	   	echo "Please choose your current GPU:"
-	    	echo "1) AMD: Will install Gamescope with Mangohud and FSR support"
-	    	echo "2) Intel: Will install Gamescope with Mangohud and FSR or NIR support"
-	    	echo "3) NVIDIA (9xx+ only): Will install proprietary drivers and Gamescope with Mangohud and NIR support"
-	    	read "?Enter your choice here: " HOLO_GPU_TYPE
-
-		if [[ "${HOLO_GPU_TYPE}" == "1" ]]; then
-	        	echo "Installing gamescope for AMD GPUs..."
-			GAMESCOPE_INSTALL=(/usr/bin/pacman --noconfirm -S --needed --overwrite="*" vulkan-radeon lib32-vulkan-radeon gamescope mesa lib32-mesa)
-			break
-	    	elif [[ "${HOLO_GPU_TYPE}" == "2" ]]; then
-	        	echo "Installing gamescope for Intel GPUs..."
-			sed -i 's/linux-firmware/linux-firmware gamescope vulkan-intel lib32-vulkan-intel mesa lib32-mesa/g' ${HOLO_INSTALL_DIR}/etc/pacman.conf
-	        	GAMESCOPE_INSTALL=(/usr/bin/pacman --noconfirm -S --needed --overwrite="*" extra/vulkan-intel multilib/lib32-vulkan-intel extra/mesa multilib/lib32-mesa holo/gamescope)
-			break
-	    	elif [[ "${HOLO_GPU_TYPE}" == "3" ]]; then
-	        	echo "Installing gamescope for NVIDIA GPUs..."
-	        	GAMESCOPE_INSTALL=(/usr/bin/pacman --noconfirm -S --needed --overwrite="*" holoiso/nvidia-utils holoiso/nvidia-dkms holoiso/opencl-nvidia gamescope)
-			sed -i 's/splash/splash nvidia-drm.modeset=1/g' ${HOLO_INSTALL_DIR}/etc/default/grub
-			arch-chroot ${HOLO_INSTALL_DIR} grub-mkconfig -o /boot/grub/grub.cfg
-			break
-	    	else
-        		echo -e "You have made an invalid selection, please try again...\n"
-		fi
-	done
-	echo "\nConfiguring Steam Deck UI by default..."
-	arch-chroot ${HOLO_INSTALL_DIR} ${GAMESCOPE_INSTALL}
-	mkdir ${HOLO_INSTALL_DIR}/etc/sddm.conf.d
-	echo "[General]\nDisplayServer=wayland\n\n[Autologin]\nUser=${HOLOUSER}\nSession=gamescope-wayland.desktop" >> ${HOLO_INSTALL_DIR}/etc/sddm.conf.d/autologin.conf
-	mkdir ${HOLO_INSTALL_DIR}/home/${HOLOUSER}/Desktop
-	cp /etc/holoinstall/steamos-gamemode.desktop ${HOLO_INSTALL_DIR}/home/${HOLOUSER}/Desktop/steamos-gamemode.desktop
-	arch-chroot ${HOLO_INSTALL_DIR} chmod +x /home/${HOLOUSER}/Desktop/steamos-gamemode.desktop
-	arch-chroot ${HOLO_INSTALL_DIR} ln -s /usr/share/applications/steam.desktop /home/${HOLOUSER}/Desktop/steam.desktop
-	arch-chroot ${HOLO_INSTALL_DIR} chown -R ${HOLOUSER}:${HOLOUSER} /home/${HOLOUSER}/Desktop
-	arch-chroot ${HOLO_INSTALL_DIR} systemctl enable cups bluetooth sddm holoiso-reboot-tracker
-	arch-chroot ${HOLO_INSTALL_DIR} usermod -a -G rfkill ${HOLOUSER}
-	arch-chroot ${HOLO_INSTALL_DIR} usermod -a -G wheel ${HOLOUSER}
-	arch-chroot ${HOLO_INSTALL_DIR} sudo -u ${HOLOUSER} steam
-	arch-chroot ${HOLO_INSTALL_DIR} ${CMD_PACMAN_INSTALL} flatpak packagekit-qt5 rsync unzip vim
-	arch-chroot ${HOLO_INSTALL_DIR} flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-	arch-chroot ${HOLO_INSTALL_DIR} echo "recoveryinit" > /root/.bashrc
-}
-
-
-# The installer itself. Good wuck.
-echo "SteamOS 3 Installer"
-echo "Start time: $(date)"
-echo "Please choose installation type:"
-echo "1) barebones: Barebones OS-only installation"
-echo "2) deckperience: Full SteamOS 3 experience"
-read "?Enter your choice here: " HOLO_INSTALL_TYPE
-echo ""
-if [[ "${HOLO_INSTALL_TYPE}" == "1" ]] || [[ "${HOLO_INSTALL_TYPE}" == "barebones" ]]; then
-	echo "Installing SteamOS, barebones configuration..."
-	base_os_install
-	echo "Installation finished! You may reboot now, or type arch-chroot /mnt to make further changes"
-
-elif [[ "${HOLO_INSTALL_TYPE}" == "2" ]]; then
-
-	echo "Installing SteamOS, deckperience configuration..."
-	base_os_install
-	full_install
-	echo "Installation finished! You may reboot now, or type arch-chroot /mnt to make further changes"
-
-else
-	echo "Invalid choice. Exiting installer..."
+if echo ${DEVICE} | grep -q -P "^/dev/(nvme|loop|mmcblk)"; then
+	INSTALLDEVICE="${DEVICE}p"
 fi
 
-echo "End time: $(date)"
+if [ ! -b $DEVICE ]; then
+	echo "$DEVICE not found! Installation Aborted!"
+	exit 1
+fi
+
+echo "\nCreating partitions..."
+parted ${DEVICE} mklabel gpt
+parted ${DEVICE} mkpart esp fat32 2M 256M
+
+parted ${DEVICE} mkpart rootfs btrfs 256M 100%
+parted ${DEVICE} set 1 boot on
+parted ${DEVICE} set 1 esp on
+
+mkfs -t vfat ${INSTALLDEVICE}1
+mkfs -t btrfs -f ${INSTALLDEVICE}2
+
+echo "\nPartitioning complete, mounting and pacstrapping..."
+echo "${UCODE_INSTALL_MSG}"
+mount -t btrfs -o subvol=/,compress-force=zstd:1,discard,noatime,nodiratime ${INSTALLDEVICE}2 ${HOLO_INSTALL_DIR}
+mkdir -p ${HOLO_INSTALL_DIR}/boot/
+mount -t vfat ${INSTALLDEVICE}1 ${HOLO_INSTALL_DIR}/boot/
+
+pacstrap ${HOLO_INSTALL_DIR} base base-devel ${UCODE_INSTALL} linux linux-headers linux-mainline linux-mainline-headers linux-handheld linux-handheld-headers linux-firmware efibootmgr inetutils neofetch networkmanager sddm-wayland rinputer
+
+echo "\nBase system installation done, generating fstab..."
+genfstab -U -p ${HOLO_INSTALL_DIR} >> ${HOLO_INSTALL_DIR}/etc/fstab
+cp /etc/pacman.conf ${HOLO_INSTALL_DIR}/etc/pacman.conf
+cp /etc/pacman.d/mirrorlist ${HOLO_INSTALL_DIR}/etc/pacman.d/mirrorlist
+
+HOLOHOSTNAME="holodevice"
+HOLOUSER="deck"
+
+
+arch-chroot ${HOLO_INSTALL_DIR} useradd --create-home ${HOLOUSER}
+
+echo "${HOLOUSER} ALL=(root) NOPASSWD:ALL" > ${HOLO_INSTALL_DIR}/etc/sudoers.d/${HOLOUSER}
+chmod 0440 ${HOLO_INSTALL_DIR}/etc/sudoers.d/${HOLOUSER}
+
+echo ${HOLOHOSTNAME} > ${HOLO_INSTALL_DIR}/etc/hostname
+echo "127.0.1.1    ${HOLOHOSTNAME}" >> ${HOLO_INSTALL_DIR}/etc/hosts
+
+echo "\nInstalling bootloader..."
+arch-chroot ${HOLO_INSTALL_DIR} bootctl install
+mkentry "SteamOS, Patched mainline kernel" "handheld" > ${HOLO_INSTALL_DIR}/boot/loader/entries/01-handheld.conf
+mkentry "SteamOS, Pure mainline kernel" "mainline" > ${HOLO_INSTALL_DIR}/boot/loader/entries/02-mainline.conf
+
+# force max resolution to autorotate display
+echo "timeout 3" > ${HOLO_INSTALL_DIR}/boot/loader/loader.conf
+echo "console-mode auto" >> ${HOLO_INSTALL_DIR}/boot/loader/loader.conf
+echo "default 01-handheld.conf" >> ${HOLO_INSTALL_DIR}/boot/loader/loader.conf
+
+arch-chroot ${HOLO_INSTALL_DIR} systemctl enable NetworkManager systemd-timesyncd Rinputer3
+
+echo "\nSetting up locale..."
+echo "${SYSTEM_LOCALE}" >> ${HOLO_INSTALL_DIR}/etc/locale.gen
+arch-chroot ${HOLO_INSTALL_DIR} locale-gen
+echo "LANG=$(echo ${SYSTEM_LOCALE} | cut -d' ' -f1)" > ${HOLO_INSTALL_DIR}/etc/locale.conf	
+echo "Installing full SteamOS 3..."
+arch-chroot ${HOLO_INSTALL_DIR} ${CMD_PACMAN_UPDATE}
+arch-chroot ${HOLO_INSTALL_DIR} ${CMD_PACMAN_INSTALL} holoiso-main holoiso-updateclient wireplumber vulkan-radeon vulkan-intel lib32-vulkan-radeon lib32-vulkan-intel holo/gamescope mesa lib32-mesa
+
+echo "\nConfiguring Steam Deck UI by default..."
+mkdir ${HOLO_INSTALL_DIR}/etc/sddm.conf.d
+echo "[General]\nDisplayServer=wayland\n\n[Autologin]\nUser=${HOLOUSER}\nSession=gamescope-wayland.desktop" >> ${HOLO_INSTALL_DIR}/etc/sddm.conf.d/autologin.conf
+mkdir ${HOLO_INSTALL_DIR}/home/${HOLOUSER}/Desktop
+cp /etc/holoinstall/steamos-gamemode.desktop ${HOLO_INSTALL_DIR}/home/${HOLOUSER}/Desktop/steamos-gamemode.desktop
+arch-chroot ${HOLO_INSTALL_DIR} chmod +x /home/${HOLOUSER}/Desktop/steamos-gamemode.desktop
+arch-chroot ${HOLO_INSTALL_DIR} ln -s /usr/share/applications/steam.desktop /home/${HOLOUSER}/Desktop/steam.desktop
+arch-chroot ${HOLO_INSTALL_DIR} chown -R ${HOLOUSER}:${HOLOUSER} /home/${HOLOUSER}/Desktop
+arch-chroot ${HOLO_INSTALL_DIR} systemctl enable cups bluetooth sddm holoiso-reboot-tracker
+arch-chroot ${HOLO_INSTALL_DIR} usermod -a -G rfkill ${HOLOUSER}
+arch-chroot ${HOLO_INSTALL_DIR} usermod -a -G wheel ${HOLOUSER}
+arch-chroot ${HOLO_INSTALL_DIR} sudo -u ${HOLOUSER} steam
+arch-chroot ${HOLO_INSTALL_DIR} ${CMD_PACMAN_INSTALL} flatpak packagekit-qt5 rsync unzip vim
+arch-chroot ${HOLO_INSTALL_DIR} flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+arch-chroot ${HOLO_INSTALL_DIR} echo "recoveryinit" > /root/.bashrc
+
+echo "Done!"
