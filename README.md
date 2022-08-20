@@ -11,10 +11,8 @@ Differences from HoloISO:
 - Command line install(Gamepad support TODO)
 - Systemd-boot used instead of GRUB
 - Much much better support for handheld gaming PCs
-- Ripped out `barebones` and `gameonly` installation options(TODO)
 - More desktop environment options(TODO)
 - Ripped out NVidia GPU support
-- GPU Autodetection(TODO)
 
 Supported devices:
 - [QEMU](QEMU.md), only for testing
