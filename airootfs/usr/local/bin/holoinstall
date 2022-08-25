@@ -109,7 +109,7 @@ arch-chroot ${HOLO_INSTALL_DIR} locale-gen
 echo "LANG=$(echo ${SYSTEM_LOCALE} | cut -d' ' -f1)" > ${HOLO_INSTALL_DIR}/etc/locale.conf	
 echo "Installing full SteamOS 3..."
 arch-chroot ${HOLO_INSTALL_DIR} ${CMD_PACMAN_UPDATE}
-arch-chroot ${HOLO_INSTALL_DIR} ${CMD_PACMAN_INSTALL} holoiso-main holoiso-updateclient wireplumber vulkan-radeon vulkan-intel lib32-vulkan-radeon lib32-vulkan-intel holo/gamescope mesa lib32-mesa
+arch-chroot ${HOLO_INSTALL_DIR} ${CMD_PACMAN_INSTALL} holoiso-main holoiso-updateclient wireplumber vulkan-radeon vulkan-intel lib32-vulkan-radeon lib32-vulkan-intel holoiso/gamescope mesa lib32-mesa
 
 echo "\nConfiguring Steam Deck UI by default..."
 mkdir ${HOLO_INSTALL_DIR}/etc/sddm.conf.d
