@@ -16,7 +16,8 @@ Differences from HoloISO:
 
 Supported devices:
 - [QEMU](QEMU.md), only for testing
-- AYANEO NEXT
+- Aya Neo Next
+- Aya Neo Air
 - Anbernic Win600(might get removed in future due to ugly hacks required)
 
 Installation process:
